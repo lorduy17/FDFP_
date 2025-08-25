@@ -32,11 +32,13 @@ class Interfaz():
         self.slider_y.pack(fill="x")
         self.slider_z = tk.Scale(master, from_=0, to=360, orient=tk.HORIZONTAL, label="Rot Z", command=self.update_plot)
         self.slider_z.pack(fill="x")
-        
-        self.update_plot(0)  # Dibuja inicial
+
+         # Dibuja inicial
+        self.update_plot(0)  
         self.ax.clear()
 
     def update_plot(self, _):
+        # obtener los angulos
         ang_x = np.radians(self.slider_x.get())
         ang_y = np.radians(self.slider_y.get())
         ang_z = np.radians(self.slider_z.get())
@@ -55,21 +57,10 @@ class Interfaz():
         sld_r = sld_r.T.reshape(n_tri,3,3)
         # Redibujar
         self.ax.clear()
-
-        # puntos = sld_r.T.reshape(-1,3,3)
         coleccion = Poly3DCollection(sld_r, alpha=0.7, facecolor="lightblue", edgecolor="k")
-        # self.ax.scatter(sld_r[0,:], sld_r[1,:], sld_r[aforme
-        # self.canvas.draw()
         self.ax.add_collection3d(coleccion)
         self.ax.set_box_aspect([1,1,1])
         self.canvas.draw()
 
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     root.title("Rotación STL con sliders")
 
-#     obj = maya()  # Esto abrirá el diálogo para cargar el STL
-#     app = Interfaz(root, obj)
-
-#     root.mainloop()
 
