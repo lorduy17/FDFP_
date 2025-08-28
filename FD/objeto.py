@@ -31,14 +31,7 @@ class maya():
         
         model_flat = self.model.vectors.reshape(-1,3)
 
-        centroid = np.mean(model_flat, axis=0)
-        model_centered = model_flat - centroid
-        
-        ranges = np.ptp(model_centered, axis=0)
-        max_range = np.max(ranges)
-        if max_range == 0:
-         max_range = 1
-
-        normalized = model_centered/ max_range
+        max = np.max(model_flat)
+        normalized = model_flat/ max
         self.normalized_vectors = normalized.reshape(self.model.vectors.shape)
         return self.normalized_vectors
