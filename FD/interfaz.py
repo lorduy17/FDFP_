@@ -13,14 +13,13 @@ from objeto import maya
 
 
 class Interfaz():
-    def __init__(self,master,objeto):
+    def __init__(self,master):
         self.master = master
         self.objeto = maya()
         self.opn = operations()
 
         self.entries = {}
-        self.entry_frames = {}
-        self.input_mode = tk.StringVar(value="Euler angles")
+        
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
 
@@ -28,60 +27,68 @@ class Interfaz():
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # Input type
-        self.input_type = tk.StringVar(value="Euler angles")
-        self.create_mode_selector()
+        # Create entries
         self.create_entries()
 
         # Buttons
         self.create_buttons()
 
-        # Wigets
+        # Init values
+        self.wind_norm = np.array([0,0,0])
     
-
-    def create_mode_selector(self):
-        frame = ttk.Frame(self.master)
-        frame.pack(pady = 5)
-        tk.Label(frame, text="Select input type:").pack(side=tk.LEFT)
-        combo = ttk.Combobox(frame, textvariable=self.input_mode,values=[
-            "Euler angles",
-            "Aerodynamic angles",
-            "Wind vector"
-        ],state="readonly")
-        combo.pack(side=tk.LEFT)
-        combo.bind("<<ComboboxSelected>>", lambda e: self.update_view_input())
-
+    # Wigets
     def create_entries(self):
         frame = tk.Frame(self.master)
         frame.pack(pady=5)
-        labels = {
-            "Euler angles": ["phi(°)", "theta(°)", "psi(°)"],
-            "Aerodynamic angles": ["alpha(°)", "beta(°)", "clinb(°)"],
-            "Wind vector": ["u m/s", "v m/s", "w m/s"]
-        }
-        self.entry_frames = {}
-        for mode, keys in labels.items():
-            f = tk.Frame(frame)
-            f.pack(side="top", fill="x", pady=2)
-            self.entry_frames[mode] = f
-            for key in keys:
-                e_frame = tk.Frame(f)
-                e_frame.pack(side="left", padx=5)
-                tk.Label(e_frame, text=key).pack()
-                entry = tk.Entry(e_frame, width=10)
-                entry.insert(0, "0")
-                entry.pack()
-                self.entries[key] = entry
-                entry.bind("<Return>", lambda e: self.update.plot())
-        self.update_view_input()
+
+        # Euler angles
+        euler_frame = tk.LabelFrame(frame, text="Euler Angles")
+        euler_frame.pack(side="left", padx=10)
+        for key in ["phi(°)", "theta(°)", "psi(°)"]:
+            self.add_entry(euler_frame, key)
+
+        # Aerodynamic Angles
+        aero_frame = tk.LabelFrame(frame, text="Aerodynamic Angles")
+        aero_frame.pack(side="left", padx=10)
+        
+        for key in ["alpha(°)", "beta(°)", "gamma(°)"]:
+            self.add_entry(aero_frame, key)
+
+        # Body
+        wind_frame = tk.LabelFrame(frame, text="Body")
+        wind_frame.pack(side="left", padx=10)
+        for key in ["u m/s", "v m/s", "w m/s"]:
+            self.add_entry(wind_frame, key)    
+
+        # Across Wind
+        aw_frame = tk.LabelFrame(frame, text="Wind Across")     
+        aw_frame.pack(side="left",padx=10)
+        for key in ["wind_x m/s","wind_y m/s","wind_z m/s"]:
+            self.add_entry(aw_frame, key)
+        
+        # Gamma input
+        self.gamma_input_var = tk.BooleanVar()
+        self.gamma_input_var.set(False)
+
+        tk.Checkbutton(aero_frame, text="Gamma es entrada",
+                       variable=self.gamma_input_var).pack()
+
+    def add_entry(self,parent,label_text):
+        frame = tk.Frame(parent)
+        frame.pack(pady=2)
+        tk.Label(frame, text=label_text).pack()
+        entry = tk.Entry(frame, width=10)
+        entry.insert(0, "0")
+        entry.pack()
+        self.entries[label_text] = entry
 
     def create_buttons(self):
-        tk.Button(self.master, text="Load STL",
-                    command=self.load_stl).pack(side=tk.LEFT, padx=5, pady=5)
-        tk.Button(self.master, text="Update rotation",
-                    command=self.update_plot).pack(side=tk.LEFT, padx=5, pady=5)
+        button_frame = tk.Frame(self.master)
+        button_frame.pack(pady=10)
 
-        ## Functions ##
+        tk.Button(button_frame, text="Load STL", command=self.load_stl).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Update Rotation", command=self.update_plot).pack(side=tk.LEFT, padx=5)
+   
 
     def load_stl(self):
         filename = filedialog.askopenfilename(title="Select STL file",
@@ -90,13 +97,7 @@ class Interfaz():
             self.objeto.file_load(filename)
             self.update_plot()
 
-    def update_view_input(self):
-        mode = self.input_mode.get()
-        for m, frame in self.entry_frames.items():
-            if m == mode:
-                frame.pack(side="top", fill="x", pady=2)
-            else:
-                frame.pack_forget()
+
     
     def set_axes_equal(self):
         '''Set 3D plot axes to equal scale.'''
@@ -116,44 +117,85 @@ class Interfaz():
         self.ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         self.ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         self.ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
     def update_plot(self):
         if self.objeto.get_normalized_vertices() is None:
             return
-        mode = self.input_mode.get()
+        
         vectors = self.objeto.get_normalized_vertices().reshape(-1,3,3)
         try:
-                
-            if mode == "Euler angles":
-                phi = float(self.entries["phi(°)"].get())
-                theta = float(self.entries["theta(°)"].get())
-                psi = float(self.entries["psi(°)"].get())
-                R = self.opn.mult_matrix(
-                    self.opn.rot_x(phi),
-                    self.opn.rot_y(theta),
-                    self.opn.rot_z(psi)
-                )
-            elif mode == "Aerodynamic angles":
-                alpha = float(self.entries["alpha(°)"].get())
-                beta = float(self.entries["beta(°)"].get())
-                R = self.opn.mult_matrix(
-                    self.opn.rot_z(-beta),
-                    self.opn.rot_y(alpha)
-                )
-            elif mode == "Wind vector":
-                u = float(self.entries["u m/s"].get())
-                v = float(self.entries["v m/s"].get())
-                w = float(self.entries["w m/s"].get())
-                wind = np.array([u, v, w])
-                if np.linalg.norm(wind) != 0:
-                    wind_norm = wind / np.linalg.norm(wind)
-                    alpha = np.arctan2(wind_norm[2], wind_norm[0])
-                    beta = np.arcsin(wind_norm[1])
-                    R = self.opn.mult_matrix(
-                        self.opn.rot_z((-beta)),
-                        self.opn.rot_y((alpha))
+
+            self.phi = float(self.entries["phi(°)"].get())
+            self.theta = float(self.entries["theta(°)"].get())
+            self.psi = float(self.entries["psi(°)"].get())
+            self.alpha = float(self.entries["alpha(°)"].get())
+            self.beta = float(self.entries["beta(°)"].get())
+            self.gamma = float(self.entries["gamma(°)"].get())
+            u = float(self.entries["u m/s"].get())
+            v = float(self.entries["v m/s"].get())
+            w = float(self.entries["w m/s"].get())
+            wind_x = float(self.entries["wind_x m/s"].get())
+            wind_y = float(self.entries["wind_y m/s"].get())
+            wind_z = float(self.entries["wind_z m/s"].get())
+
+            if np.linalg.norm([self.phi,self.theta,self.psi]) != 0:
+                R_euler = self.opn.mult_matrix(
+                    self.opn.rot_x(self.phi),
+                    self.opn.rot_y(self.theta),
+                    self.opn.rot_z(self.psi)
                     )
+            else:
+                R_euler = np.eye(3)
+
+            R_aero = self.opn.mult_matrix(
+                self.opn.rot_z(-self.beta),
+                self.opn.rot_y(self.alpha)
+            )
+                    
+            awind = np.array([wind_x,wind_y,wind_z])
+            wind = np.array([u, v, w])
+
+            if np.linalg.norm(wind) != 0:
+                if  np.linalg.norm(awind) != 0:
+                    wind = wind + awind
+
+                self.wind_norm = operations.normalized(wind)
+                self.alpha = np.arctan2(self.wind_norm[2], self.wind_norm[0])
+                self.beta = np.arcsin(self.wind_norm[1])
+                R_aero = self.opn.mult_matrix(self.opn.rot_z(np.degrees(-self.beta)),
+                                              self.opn.rot_y(np.degrees(self.alpha))
+                                              )
+                if self.gamma_input_var.get():
+                    self.theta = self.alpha+self.gamma
                 else:
-                    R = np.eye(3)
+                    self.gamma = self.theta-self.alpha
+
+                R = self.opn.mult_matrix(R_euler,R_aero)
+            
+            else:
+                self.wind_norm = np.array([0, 0, 0])
+                R_euler = self.opn.mult_matrix(
+                    self.opn.rot_x(self.phi),
+                    self.opn.rot_y(self.theta),
+                    self.opn.rot_z(self.psi)
+                )
+                R_aero = self.opn.mult_matrix(
+                    self.opn.rot_z(-self.beta),
+                    self.opn.rot_y(self.alpha)
+                )
+
+                R = self.opn.mult_matrix(R_euler, R_aero)
+            
+            self.opn.update_state(
+                np.degrees(self.alpha),
+                np.degrees(self.beta),
+                np.degrees(self.gamma),
+                wind
+            )
+
+            print(self.opn.state_actual())
+                    
         except ValueError:
             print("Invalid input")
             return
@@ -174,16 +216,56 @@ class Interfaz():
         
 
         self.ax.add_collection3d(poly)
-        self.ax.set_box_aspect([1,1,1])  # Mantiene la proporción en x,y,z
-        self.ax.view_init(elev=20, azim=30)
+        self.ax.set_box_aspect([1,1,1])  
         self.set_axes_equal()
+
+        # NED fixed
+        NED = np.array([[1, 0, 0],
+                        [0, -1, 0],
+                        [0, 0, -1]])
+        NED = R @ NED
+
+        self.ax.quiver(0, 0, 0, NED[0,0], NED[1,0], NED[2,0], color='g', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, NED[0,1], NED[1,1], NED[2,1], color='g', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, NED[0,2], NED[1,2], NED[2,2], color='g', length=1.4, normalize=True)
+        self.ax.text(NED[0,0], NED[1,0], NED[2,0], 'X', color='g')
+        self.ax.text(NED[0,1], NED[1,1], NED[2,1], 'Y', color='g')
+        self.ax.text(NED[0,2], NED[1,2], NED[2,2], 'Z', color='g')
+
+        
+
+        # Vehicle fixed
+
+        body_axes = np.array([[1, 0, 0],
+                        [0, -1, 0],
+                        [0, 0, -1]])
+       
+        self.ax.quiver(0, 0, 0, body_axes[0,0], body_axes[1,0], body_axes[2,0], color='purple', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, body_axes[0,1], body_axes[1,1], body_axes[2,1], color='purple', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, body_axes[0,2], body_axes[1,2], body_axes[2,2], color='purple', length=1.4, normalize=True)
+        self.ax.text(body_axes[0,0], body_axes[1,0], body_axes[2,0], 'Xb', color='purple')
+        self.ax.text(body_axes[0,1], body_axes[1,1], body_axes[2,1], 'Yb', color='purple')
+        self.ax.text(body_axes[0,2], body_axes[1,2], body_axes[2,2], 'Zb', color='purple')
+
+
+        # Show wind vector
+        if np.linalg.norm(self.wind_norm) != 0:
+            self.ax.quiver(0,0,0, 
+                           self.wind_norm[0],-self.wind_norm[1],-self.wind_norm[2],
+            color="magenta",linewidth = 2, length=1.3, normalize=True)
+            self.ax.text(self.wind_norm[0], -self.wind_norm[1], -self.wind_norm[2],
+                 'Wind', color='magenta')
+
+        
+         # Initial view
+        self.ax.view_init(elev=20., azim=30)
         self.canvas.draw()
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("3D STL Viewer")
-    app = Interfaz(root,maya())
-    root.mainloop()
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     root.title("3D STL Viewer")
+#     app = Interfaz(root)
+#     root.mainloop()
 
         
