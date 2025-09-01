@@ -49,7 +49,7 @@ class operations:
             "------------------------------" '\n'
             "AoA, alpha:              ",np.rad2deg(self.alpha), '\n'
             "Slideslipe angle, beta:  ",np.rad2deg(self.beta), '\n'
-            "Climb angle, gamma:      ",np.rad2deg(self.beta), '\n'
+            "Climb angle, gamma:      ",np.rad2deg(self.gamma), '\n'
             "------------------------------"  '\n'
             "Attitude: Euler angles,  rads" '\n'
             "------------------------------" '\n'
@@ -81,3 +81,4 @@ class operations:
     def normalized(v):
         return v / np.linalg.norm(v)
     
+
