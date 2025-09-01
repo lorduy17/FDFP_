@@ -1,5 +1,3 @@
-
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -126,12 +124,12 @@ class Interfaz():
         vectors = self.objeto.get_normalized_vertices().reshape(-1,3,3)
         try:
 
-            self.phi = float(self.entries["phi(°)"].get())
-            self.theta = float(self.entries["theta(°)"].get())
-            self.psi = float(self.entries["psi(°)"].get())
-            self.alpha = float(self.entries["alpha(°)"].get())
-            self.beta = float(self.entries["beta(°)"].get())
-            self.gamma = float(self.entries["gamma(°)"].get())
+            self.phi = np.deg2rad(float(self.entries["phi(°)"].get()))
+            self.theta = -np.deg2rad(float(self.entries["theta(°)"].get()))
+            self.psi = np.deg2rad(float(self.entries["psi(°)"].get()))
+            self.alpha = np.deg2rad(float(self.entries["alpha(°)"].get()))
+            self.beta = np.deg2rad(float(self.entries["beta(°)"].get()))
+            self.gamma = np.deg2rad(float(self.entries["gamma(°)"].get()))
             u = float(self.entries["u m/s"].get())
             v = float(self.entries["v m/s"].get())
             w = float(self.entries["w m/s"].get())
@@ -139,6 +137,7 @@ class Interfaz():
             wind_y = float(self.entries["wind_y m/s"].get())
             wind_z = float(self.entries["wind_z m/s"].get())
 
+            # R_euler calc
             if np.linalg.norm([self.phi,self.theta,self.psi]) != 0:
                 R_euler = self.opn.mult_matrix(
                     self.opn.rot_x(self.phi),
@@ -147,50 +146,46 @@ class Interfaz():
                     )
             else:
                 R_euler = np.eye(3)
+            
 
-            R_aero = self.opn.mult_matrix(
-                self.opn.rot_z(-self.beta),
-                self.opn.rot_y(self.alpha)
-            )
-                    
+            # R_aero calc
             awind = np.array([wind_x,wind_y,wind_z])
-            wind = np.array([u, v, w])
+            wind = np.array([u, v, w]) - awind
+         
+            if np.linalg.norm(wind) == 0: ## For case 1
+                alpha = 0
+                beta = 0
+                gamma = self.theta
+                R_aero = np.eye(3)
 
-            if np.linalg.norm(wind) != 0:
-                if  np.linalg.norm(awind) != 0:
-                    wind = wind + awind
-
+            else: 
                 self.wind_norm = operations.normalized(wind)
-                self.alpha = np.arctan2(self.wind_norm[2], self.wind_norm[0])
-                self.beta = np.arcsin(self.wind_norm[1])
-                R_aero = self.opn.mult_matrix(self.opn.rot_z(np.degrees(-self.beta)),
-                                              self.opn.rot_y(np.degrees(self.alpha))
-                                              )
-                if self.gamma_input_var.get():
-                    self.theta = self.alpha+self.gamma
+                if wind[2] == 0:
+                    alpha = 0
+                    beta = np.arcsin(self.wind_norm[1])
+                    
+                    gamma = self.theta - alpha
                 else:
-                    self.gamma = self.theta-self.alpha
+                    alpha = np.arctan2(self.wind_norm[2],self.wind_norm[0])
+                    beta = np.arcsin(self.wind_norm[1])
+                    
+                    if self.gamma_input_var.get():
+                        gamma = self.theta - alpha
+                        self.theta = self.gamma + self.alpha
+                    else:
+                        gamma = 0
 
-                R = self.opn.mult_matrix(R_euler,R_aero)
+            self.alpha = alpha 
+            self.beta = beta
+            self.gamma = gamma
             
-            else:
-                self.wind_norm = np.array([0, 0, 0])
-                R_euler = self.opn.mult_matrix(
-                    self.opn.rot_x(self.phi),
-                    self.opn.rot_y(self.theta),
-                    self.opn.rot_z(self.psi)
-                )
-                R_aero = self.opn.mult_matrix(
-                    self.opn.rot_z(-self.beta),
-                    self.opn.rot_y(self.alpha)
-                )
 
-                R = self.opn.mult_matrix(R_euler, R_aero)
-            
+            R = R_euler
+
             self.opn.update_state(
-                np.degrees(self.alpha),
-                np.degrees(self.beta),
-                np.degrees(self.gamma),
+                self.alpha,
+                self.beta,
+                self.gamma,
                 wind
             )
 
@@ -232,33 +227,26 @@ class Interfaz():
         self.ax.text(NED[0,1], NED[1,1], NED[2,1], 'Y', color='g')
         self.ax.text(NED[0,2], NED[1,2], NED[2,2], 'Z', color='g')
 
-        
+        ## X fixed
 
-        # Vehicle fixed
+        self.ax.quiver(0,0,0, 1,0,0, color='magenta', length=1.4, normalize=True)
+        self.ax.text(1,0,0, 'Xs', color='magenta')
 
-        body_axes = np.array([[1, 0, 0],
-                        [0, -1, 0],
-                        [0, 0, -1]])
-       
-        self.ax.quiver(0, 0, 0, body_axes[0,0], body_axes[1,0], body_axes[2,0], color='purple', length=1.4, normalize=True)
-        self.ax.quiver(0, 0, 0, body_axes[0,1], body_axes[1,1], body_axes[2,1], color='purple', length=1.4, normalize=True)
-        self.ax.quiver(0, 0, 0, body_axes[0,2], body_axes[1,2], body_axes[2,2], color='purple', length=1.4, normalize=True)
-        self.ax.text(body_axes[0,0], body_axes[1,0], body_axes[2,0], 'Xb', color='purple')
-        self.ax.text(body_axes[0,1], body_axes[1,1], body_axes[2,1], 'Yb', color='purple')
-        self.ax.text(body_axes[0,2], body_axes[1,2], body_axes[2,2], 'Zb', color='purple')
+    
 
 
         # Show wind vector
         if np.linalg.norm(self.wind_norm) != 0:
+            v_r = self.wind_norm
             self.ax.quiver(0,0,0, 
-                           self.wind_norm[0],-self.wind_norm[1],-self.wind_norm[2],
-            color="magenta",linewidth = 2, length=1.3, normalize=True)
-            self.ax.text(self.wind_norm[0], -self.wind_norm[1], -self.wind_norm[2],
-                 'Wind', color='magenta')
+                           v_r[0],v_r[1],v_r[2],
+            color="lightblue",linewidth = 2, length=1.3, normalize=True)
+            self.ax.text(v_r[0],v_r[1],v_r[2],
+                 'Wind', color='lightblue')
 
         
          # Initial view
-        self.ax.view_init(elev=20., azim=30)
+        self.ax.view_init(elev=20., azim=-30)
         self.canvas.draw()
 
 
