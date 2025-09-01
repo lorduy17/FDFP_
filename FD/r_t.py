@@ -1,6 +1,4 @@
 import numpy as np
-
-
 class operations:
 
     def __init__(self):
@@ -14,60 +12,64 @@ class operations:
         
     def rot_x(self,phi):
         self.phi = phi
-        c = np.cos(np.radians(phi))
-        s = np.sin(np.radians(phi))
+        c = np.cos( (phi))
+        s = np.sin( (phi))
         return np.array([[1, 0, 0],
                          [0, c, -s],
                          [0, s, c]])
-    
      
     def rot_y(self,theta):
         self.theta = theta
-        c = np.cos(np.radians(theta))
-        s = np.sin(np.radians(theta))
+        c = np.cos( (theta))
+        s = np.sin( (theta))
         return np.array([[c, 0, s],
                          [0, 1, 0],
                          [-s, 0, c]])
     
-     
     def rot_z(self,psi):
         self.psi = psi
-        c = np.cos(np.radians(psi))
-        s = np.sin(np.radians(psi))
+        c = np.cos( (psi))
+        s = np.sin( (psi))
         return np.array([[c, -s, 0],
                          [s, c, 0],
                          [0, 0, 1]])
     
     def update_state(self,alpha,beta,gamma,wind):
 
-        # check units
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
         self.wind = wind
-    
+
     def state_actual(self,):
-
-        return {
-            "angles": {
-            "alpha": self.alpha, # Angle of attack [deg]
-            "beta": self.beta, # Sideslip angle [deg]
-            "gamma": self.gamma # climb angle [deg]
-            },
-            "velocities_body": self.wind, # [u, v, w] in body frame
-            
-            # "angular_rates": np.array([p, q, r]), # [p, q, r] roll, pitch, yaw r
-            
-            "attitude": np.array([self.phi, self.theta, self.psi]) # [φ, θ, ψ] Euler angles [ra
-            
-        }
+        return print(
+            "********  STATE ACTUAL  *******",'\n'
+            "------------------------------", '\n'
+            "Angles,                  deg" '\n'
+            "------------------------------" '\n'
+            "AoA, alpha:              ",np.rad2deg(self.alpha), '\n'
+            "Slideslipe angle, beta:  ",np.rad2deg(self.beta), '\n'
+            "Climb angle, gamma:      ",np.rad2deg(self.beta), '\n'
+            "------------------------------"  '\n'
+            "Attitude: Euler angles,  rads" '\n'
+            "------------------------------" '\n'
+            "psi:                     ",self.psi, '\n'
+            "theta:                   ",self.theta, '\n'
+            "phi:                     ",self.phi, '\n'
+            "------------------------------"  '\n'
+            "Velocities body,         km/h" '\n'
+            "------------------------------" '\n'
+            "u:                       ",self.wind[0], '\n'
+            "v:                       ",self.wind[1],'\n'
+            "w:                       ",self.wind[2], '\n'
+            "------------------------------"  '\n'
+            # "Angular rates,           rad/s" '\n'
+            # "------------------------------" '\n'
+            # "p:                       ",self.p, '\n'
+            # "q:                       ",self.q,'\n'
+            # "r:                       ",self.r, '\n'
+        )
          
-    
-    
-
-
-
-    
     @staticmethod 
     def mult_matrix(*matrices):
         result = np.eye(3)
@@ -77,10 +79,5 @@ class operations:
     
     @staticmethod
     def normalized(v):
-        v_min = np.min(v)
-        v_max = np.max(v)
-        if v_max - v_min == 0:
-            return v
-        return (v - v_min) / (v_max - v_min)
-    
+        return v / np.linalg.norm(v)
     
