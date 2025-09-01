@@ -173,7 +173,7 @@ class Interfaz():
                         self.gamma = self.theta - alpha
                         self.theta = self.gamma + self.alpha
                     else:
-                        self.gamma = self.theta - alpha
+                        self.gamma = -self.theta - alpha
 
             self.alpha = alpha 
             self.beta = beta
@@ -257,4 +257,5 @@ class Interfaz():
 #     root.mainloop()
 
         
+
 
