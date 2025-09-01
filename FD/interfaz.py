@@ -170,10 +170,10 @@ class Interfaz():
                     beta = np.arcsin(self.wind_norm[1])
                     
                     if self.gamma_input_var.get():
-                        gamma = self.theta - alpha
+                        self.gamma = self.theta - alpha
                         self.theta = self.gamma + self.alpha
                     else:
-                        gamma = 0
+                        self.gamma = self.theta - alpha
 
             self.alpha = alpha 
             self.beta = beta
@@ -257,3 +257,4 @@ class Interfaz():
 #     root.mainloop()
 
         
+
