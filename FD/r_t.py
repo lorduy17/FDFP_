@@ -54,7 +54,7 @@ class operations:
             "Attitude: Euler angles,  rads" '\n'
             "------------------------------" '\n'
             "psi:                     ",self.psi, '\n'
-            "theta:                   ",self.theta, '\n'
+            "theta:                   ",-self.theta, '\n'
             "phi:                     ",self.phi, '\n'
             "------------------------------"  '\n'
             "Velocities body,         km/h" '\n'
@@ -81,4 +81,5 @@ class operations:
     def normalized(v):
         return v / np.linalg.norm(v)
     
+
 
