@@ -1,6 +1,8 @@
 import numpy as np
 class operations:
 
+    # Save the state of the aircraft
+
     def __init__(self):
         self.phi = 0
         self.theta = 0
@@ -9,6 +11,9 @@ class operations:
         self.beta = 0
         self.gamma = 0
         self.wind = np.array([0,0,0])
+        self.p = 0
+        self.q = 0
+        self.r = 0
         
     def rot_x(self,phi):
         self.phi = phi
@@ -25,7 +30,7 @@ class operations:
         return np.array([[c, 0, s],
                          [0, 1, 0],
                          [-s, 0, c]])
-    
+        
     def rot_z(self,psi):
         self.psi = psi
         c = np.cos( (psi))
@@ -34,14 +39,17 @@ class operations:
                          [s, c, 0],
                          [0, 0, 1]])
     
-    def update_state(self,alpha,beta,gamma,wind):
-
+    def update_state(self,alpha,beta,gamma,wind,p,q,r):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
         self.wind = wind
-
+        self.p = p
+        self.q = q
+        self.r = r
+    
     def state_actual(self,):
+        
         return print(
             "********  STATE ACTUAL  *******",'\n'
             "------------------------------", '\n'
@@ -63,11 +71,11 @@ class operations:
             "v:                       ",self.wind[1],'\n'
             "w:                       ",self.wind[2], '\n'
             "------------------------------"  '\n'
-            # "Angular rates,           rad/s" '\n'
-            # "------------------------------" '\n'
-            # "p:                       ",self.p, '\n'
-            # "q:                       ",self.q,'\n'
-            # "r:                       ",self.r, '\n'
+            "Angular rates,           rad/s" '\n'
+            "------------------------------" '\n'
+            "p:                       ",self.p, '\n'
+            "q:                       ",self.q,'\n'
+            "r:                       ",self.r, '\n'
         )
          
     @staticmethod 
@@ -81,5 +89,3 @@ class operations:
     def normalized(v):
         return v / np.linalg.norm(v)
     
-
-
