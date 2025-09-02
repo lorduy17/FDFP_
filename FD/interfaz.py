@@ -1,3 +1,5 @@
+
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -63,6 +65,12 @@ class Interfaz():
         aw_frame.pack(side="left",padx=10)
         for key in ["wind_x m/s","wind_y m/s","wind_z m/s"]:
             self.add_entry(aw_frame, key)
+
+        # Angular rates
+        ar_frame = tk.LabelFrame(frame,text=" Angular rates")
+        ar_frame.pack(side="left",padx=10)
+        for key in ["p rad/s", "q rad/s", "r rad/s"]:
+            self.add_entry(ar_frame, key)
         
         # Gamma input
         self.gamma_input_var = tk.BooleanVar()
@@ -87,7 +95,6 @@ class Interfaz():
         tk.Button(button_frame, text="Load STL", command=self.load_stl).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Update Rotation", command=self.update_plot).pack(side=tk.LEFT, padx=5)
    
-
     def load_stl(self):
         filename = filedialog.askopenfilename(title="Select STL file",
             filetypes=[("STL files", "*.stl")])
@@ -95,10 +102,7 @@ class Interfaz():
             self.objeto.file_load(filename)
             self.update_plot()
 
-
-    
     def set_axes_equal(self):
-        '''Set 3D plot axes to equal scale.'''
         x_limits = self.ax.get_xlim3d()
         y_limits = self.ax.get_ylim3d()
         z_limits = self.ax.get_zlim3d()
@@ -117,13 +121,13 @@ class Interfaz():
         self.ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 
+    # Updatte plot
     def update_plot(self):
         if self.objeto.get_normalized_vertices() is None:
             return
         
         vectors = self.objeto.get_normalized_vertices().reshape(-1,3,3)
         try:
-
             self.phi = np.deg2rad(float(self.entries["phi(°)"].get()))
             self.theta = -np.deg2rad(float(self.entries["theta(°)"].get()))
             self.psi = np.deg2rad(float(self.entries["psi(°)"].get()))
@@ -136,6 +140,9 @@ class Interfaz():
             wind_x = float(self.entries["wind_x m/s"].get())
             wind_y = float(self.entries["wind_y m/s"].get())
             wind_z = float(self.entries["wind_z m/s"].get())
+            self.p = float(self.entries["p rad/s"].get())
+            self.q = float(self.entries["q rad/s"].get())
+            self.r = float(self.entries["r rad/s"].get())
 
             # R_euler calc
             if np.linalg.norm([self.phi,self.theta,self.psi]) != 0:
@@ -146,47 +153,53 @@ class Interfaz():
                     )
             else:
                 R_euler = np.eye(3)
-            
-
+        
             # R_aero calc
             awind = np.array([wind_x,wind_y,wind_z])
             wind = np.array([u, v, w]) - awind
+
+            # Cases
+            ## Evaluate special cases to avoid NaN
+            ### Case 1: No wind
+            ### Case 2: No vertical wind
+            ### Case 3: General case
          
             if np.linalg.norm(wind) == 0: ## For case 1
                 alpha = 0
                 beta = 0
-                gamma = self.theta
+                gamma = -self.theta
                 R_aero = np.eye(3)
 
             else: 
                 self.wind_norm = operations.normalized(wind)
-                if wind[2] == 0:
+                if wind[2] == 0: ## For case 2
                     alpha = 0
                     beta = np.arcsin(self.wind_norm[1])
-                    
-                    gamma = self.theta - alpha
-                else:
+                    gamma = -self.theta - alpha
+                else: # For case 3
                     alpha = np.arctan2(self.wind_norm[2],self.wind_norm[0])
                     beta = np.arcsin(self.wind_norm[1])
-                    
                     if self.gamma_input_var.get():
-                        self.gamma = self.theta - alpha
                         self.theta = self.gamma + self.alpha
                     else:
-                        self.gamma = -self.theta - alpha
+                        gamma = -self.theta - alpha
 
+
+            # Update values
             self.alpha = alpha 
             self.beta = beta
             self.gamma = gamma
-            
-
+   
             R = R_euler
 
             self.opn.update_state(
                 self.alpha,
                 self.beta,
                 self.gamma,
-                wind
+                wind,
+                self.p,
+                self.q,
+                self.r
             )
 
             print(self.opn.state_actual())
@@ -195,21 +208,25 @@ class Interfaz():
             print("Invalid input")
             return
         
+
+
+        temp = np.array([self.p,self.q,self.r])
+        operations.normalized(temp)
+        self.p,self.q,self.r = temp
+
+        # Aplie rotation to body
         vectors_rot = vectors.reshape(-1,3) @ R.T
         vectors_rot = vectors_rot.reshape(vectors.shape)
-
-        
 
         # Draw
         self.ax.clear()
         self.ax.grid(True)
-        self.ax.set_axis_off()
+        # self.ax.set_axis_off()
         
         poly = Poly3DCollection(vectors_rot, alpha=0.7,
                                 facecolor="lightblue",
                                 edgecolor="k")
         
-
         self.ax.add_collection3d(poly)
         self.ax.set_box_aspect([1,1,1])  
         self.set_axes_equal()
@@ -220,20 +237,16 @@ class Interfaz():
                         [0, 0, -1]])
         NED = R @ NED
 
-        self.ax.quiver(0, 0, 0, NED[0,0], NED[1,0], NED[2,0], color='g', length=1.4, normalize=True)
-        self.ax.quiver(0, 0, 0, NED[0,1], NED[1,1], NED[2,1], color='g', length=1.4, normalize=True)
-        self.ax.quiver(0, 0, 0, NED[0,2], NED[1,2], NED[2,2], color='g', length=1.4, normalize=True)
-        self.ax.text(NED[0,0], NED[1,0], NED[2,0], 'X', color='g')
-        self.ax.text(NED[0,1], NED[1,1], NED[2,1], 'Y', color='g')
-        self.ax.text(NED[0,2], NED[1,2], NED[2,2], 'Z', color='g')
+        self.ax.quiver(0, 0, 0, NED[0,0], NED[1,0], NED[2,0], color='lime', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, NED[0,1], NED[1,1], NED[2,1], color='lime', length=1.4, normalize=True)
+        self.ax.quiver(0, 0, 0, NED[0,2], NED[1,2], NED[2,2], color='lime', length=1.4, normalize=True)
+        self.ax.text(NED[0,0], NED[1,0], NED[2,0], 'X', color='lime')
+        self.ax.text(NED[0,1], NED[1,1], NED[2,1], 'Y', color='lime')
+        self.ax.text(NED[0,2], NED[1,2], NED[2,2], 'Z', color='lime')
 
-        ## X fixed
-
+        # X fixed
         self.ax.quiver(0,0,0, 1,0,0, color='magenta', length=1.4, normalize=True)
         self.ax.text(1,0,0, 'Xs', color='magenta')
-
-    
-
 
         # Show wind vector
         if np.linalg.norm(self.wind_norm) != 0:
@@ -242,9 +255,16 @@ class Interfaz():
                            v_r[0],v_r[1],v_r[2],
             color="lightblue",linewidth = 2, length=1.3, normalize=True)
             self.ax.text(v_r[0],v_r[1],v_r[2],
-                 'Wind', color='lightblue')
+                 'Wind', color='cyan')
 
-        
+        # Show angular rate vector
+        if np.linalg.norm([self.p,self.q,self.r]) != 0:
+            self.ax.quiver(0,0,0,
+                        self.p,-self.q,-self.r,
+                        color = "crimson", linewidth = 2, length=1.3, normalize=True)
+            self.ax.text(self.p,self.q,self.r,
+                        'Angular rate', color='red')
+    
          # Initial view
         self.ax.view_init(elev=20., azim=-30)
         self.canvas.draw()
@@ -257,5 +277,3 @@ class Interfaz():
 #     root.mainloop()
 
         
-
-
