@@ -1,6 +1,6 @@
 # Coordinate Frames and transformation
-
 This project is a Python app with a GUI that allows viewing a 3D model in STL format and applying transformations.
+
 The tool aims to represent the body in an aeronautical reference system and display wind vectors, NED axes, and aerodynamic angles.
 
 ## Characteristics
@@ -22,13 +22,22 @@ The tool aims to represent the body in an aeronautical reference system and disp
 * Dynamic updates for modify values in the interface.
 
 
-### Estructure:
+### Structure:
 ```
 ├── main.py         # Start point of app.
 ├── interfaz.py     # Management of GUI and 3D view.
 ├── objeto.py       # Class 'maya' for load y normalized STL models.
 ├── r_t.py          # Class 'operations' for rotations and state control
 ```
+#### Structure detalils:
+* `interfaz.py`: 
+    * When obtaining the value of θ,the code structure applies a negative sign to preserve the right-hand rule in the NED axis system. Therefore, all interactions involving θ include this negative sign.
+    * To calculate the aircraft’s current state, conditional statements are used to define the different cases of interest.
+* `r_t.py`: Contains only the following functions:
+    * Generate transformation matrices.
+    * Normalize vectors.
+    * Update values to display the current state of aircraft in the terminal.
+* `objeto.py`: Normalizd STL models to simplify graphic rendering of aircraft body
 # Requirements:
 The following libreries must be installed:
 * numpy
@@ -55,4 +64,4 @@ pip install numpy matplotlib numpy-stl
 # NOTES
 * The program print in the terminal the actual state of aircraft.
 * The option **Gamma is input** allows choosing whether γ is calculated automatically or entered manually.
-* The program load the stl in the original CAD axis. It is recommended in CAD that the aircraft’s nose points along the X-axis. _For e.x load the file `aeronave_fd.stl`._
+* The program load the stl in the original CAD axis. It is recommended in CAD that the aircraft’s nose points along the X-axis. _For e.x load the file_ `aircraft.stl`.
